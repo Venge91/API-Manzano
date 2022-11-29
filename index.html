@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es" dir="ltr">
+
+
+<head>
+  <meta charset="utf-8">
+  <title>API - Manzanero</title>
+</head>
+
+<style>
+  table {
+    display: inline;
+  }
+
+  #header {
+    margin: 0 auto;
+    width: 90%;
+  }
+
+  #uploadImage {
+    text-align: center
+  }
+
+  .loader {
+    margin: auto;
+    width: 50%;
+    padding: 10px;
+    border: 16px solid #f3f3f3;
+    /* Light grey */
+    border-top: 16px solid #3498db;
+    /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+  }
+
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
+<body onload="listImages()">
+  <div id="header" center>
+
+  </div>
+
+  <div id="predecir">
+    <center>
+      <input onclick='predecirSeleccionado()' type="submit" name="enviarModelo" value="Predecir Seleccionado" />
+    </center>
+  </div>
+  <br>
+  <div id="uploadImage">
+    <form action="" method="POST" enctype="multipart/form-data" />
+    Añadir imagen: <input name="archivo" id="archivo" type="file" />
+    <input type="submit" name="subir" value="Subir imagen" />
+  </div>
+  <div class="loader" id="loader" hidden="hidden">
+    <br><h4>Cargando...</h4>
+  </div>
+  <div id="resultados">
+    <br>
+  </div>
+</body>
+<script>
+  function listImages() {
+    var requestURL = 'https://44.212.74.3/aux.php';
+    var request = new XMLHttpRequest();
+    request.open('GET', requestURL);
+    request.responseType = 'json';
+    request.send();
+    request.onload = function() {
+      var listaImagenes = Object.values(request.response);
+
+      console.log(listaImagenes)
+      for (var i = 0; i < listaImagenes.length; i++) {
+        var src = document.getElementById("header");
+
+        var tbl = document.createElement("table");
+        var tblBody = document.createElement("tbody");
+
+        var img = document.createElement("img");
+        img.style.width = "400px";
+        img.src = "http://44.212.74.3/images/" + listaImagenes[i];
+        img.setAttribute('id', listaImagenes[i]);
+        img.setAttribute('onclick', 'changeSelect(this.id)');
+        var row = document.createElement("tr");
+
+        var cell = document.createElement("td");
+
+        row.appendChild(img);
+        tblBody.appendChild(row);
+
+        var row = document.createElement("tr");
+        var cell = document.createElement("h4");
+        var cellText = document.createTextNode(listaImagenes[i]);
+        cell.style.textAlign = "center";
+        cell.appendChild(cellText);
+        row.appendChild(cell);
+        tblBody.appendChild(row);
+
+        tbl.appendChild(tblBody);
+        // appends <table> into <body>
+        document.getElementById("header").appendChild(tbl);
+        //src.appendChild(img);
+        //src.appendChild(h4);
+      }
+    }
+  }
+  var listSelect = [];
+
+  function changeSelect(id) {
+    img = document.getElementById(id);
+    img.style = "border:5px groove gold; width: 390px"
+    if (listSelect.indexOf(id) == -1) {
+      listSelect.push(id)
+    } else {
+      document.getElementById(id).style = "width: 390px";
+      var index = listSelect.indexOf(id);
+      if (index > -1) { // only splice array when item is found
+        listSelect.splice(index, 1); // 2nd parameter means remove one item only
+      }
+    }
+    console.log(listSelect)
+  }
+  respuesta = ""
+  var predicciones = []
+
+  function predecirSeleccionado() {
+    load()
+
+    //console.log("Lista: " + listSelect)
+    //console.log(typeof(listSelect[0]))
+    var x = 0
+    var contador = 0
+    for (x = 0; x < listSelect.length; x++) {
+      var nameImg = listSelect[x]
+      const Http = new XMLHttpRequest();
+      const url = 'https://44.212.74.3:5000/api/v1/';
+      Http.open("POST", url + nameImg);
+      Http.send();
+
+      Http.onreadystatechange = (e) => {
+
+        try {
+
+          predicciones.push(JSON.parse(Http.responseText))
+          console.log(JSON.parse(Http.responseText))
+          if (contador % 2 == 0) {
+            var tbl = document.createElement("table");
+            var tblBody = document.createElement("tbody");
+
+            var img = document.createElement("img");
+            img.style.width = "400px";
+            img.src = "http://44.212.74.3/images/" + listSelect[parseInt(contador / 2)];
+            img.setAttribute('id', nameImg);
+            var row = document.createElement("tr");
+
+            var cell = document.createElement("td");
+
+            row.appendChild(img);
+            tblBody.appendChild(row);
+            //console.log("Prediccion: " + predicciones.PredictCategory)
+            var row = document.createElement("tr");
+            var cell = document.createElement("h4");
+
+            var cellText = document.createTextNode("[" + predicciones[contador].nameImage  + "]");
+            cell.appendChild(cellText);
+            row.appendChild(cell);
+
+            var salto = document.createElement('br');
+            cell.appendChild(salto);
+            row.appendChild(cell);
+
+            var cellText = document.createTextNode("Predict Category: " + predicciones[contador].PredictCategory + ", with a probabilty: " + parseFloat(Math.round(predicciones[contador].Probabilty * 100 * 100) / 100).toFixed(3) + "%");
+            cell.appendChild(cellText);
+            row.appendChild(cell);
+
+            var salto = document.createElement('br');
+            cell.appendChild(salto);
+            row.appendChild(cell);
+
+            var salto = document.createElement('br');
+            cell.appendChild(salto);
+            row.appendChild(cell);
+            if (predicciones[contador].PredictCategory != 'healthy') {
+              var cellText = document.createTextNode("Prob. Sana: " + parseFloat(Math.round(predicciones[contador].probs[0]['healthy'] * 100 * 100) / 100).toFixed(3) + "%");
+              cell.appendChild(cellText);
+              row.appendChild(cell);
+
+              var salto = document.createElement('br');
+              cell.appendChild(salto);
+              row.appendChild(cell);
+            }
+            if (predicciones[contador].PredictCategory != 'multiple_diseases') {
+              var cellText = document.createTextNode("Prob. Multiple Diseases: " + parseFloat(Math.round(predicciones[contador].probs[1]['multiple_diseases'] * 100 * 100) / 100).toFixed(3) + "%");
+              cell.appendChild(cellText);
+              row.appendChild(cell);
+
+              var salto = document.createElement('br');
+              cell.appendChild(salto);
+              row.appendChild(cell);
+            }
+            if (predicciones[contador].PredictCategory != 'rust') {
+              var cellText = document.createTextNode("Prob. Rust: " + parseFloat(Math.round(predicciones[contador].probs[2]['rust'] * 100 * 100) / 100).toFixed(3) + "%");
+              cell.appendChild(cellText);
+              row.appendChild(cell);
+
+              var salto = document.createElement('br');
+              cell.appendChild(salto);
+              row.appendChild(cell);
+            }
+            if (predicciones[contador].PredictCategory != 'scab') {
+              var cellText = document.createTextNode("Prob. Scab: " + parseFloat(Math.round(predicciones[contador].probs[3]['scab'] * 100 * 100) / 100).toFixed(3) + "%");
+              cell.appendChild(cellText);
+              row.appendChild(cell);
+
+              var salto = document.createElement('br');
+              cell.appendChild(salto);
+              row.appendChild(cell);
+            }
+            cell.style.textAlign = "center";
+
+            row.appendChild(cell);
+            tblBody.appendChild(row);
+
+            tbl.appendChild(tblBody);
+            // appends <table> into <body>
+            document.getElementById("resultados").appendChild(tbl);
+
+          }
+          contador++;
+          if (contador == listSelect.length) {
+            load()
+          }
+        } catch (exceptionVar) {
+          console.log(exceptionVar)
+        }
+
+      }
+
+    }
+
+  }
+
+  function load() {
+    console.log("SI")
+    let element = document.getElementById("loader");
+    let hidden = element.getAttribute("hidden");
+
+    if (hidden) {
+      element.removeAttribute("hidden");
+    } else {
+      element.setAttribute("hidden", "hidden");
+    }
+
+  }
+</script>
+
+</html>
